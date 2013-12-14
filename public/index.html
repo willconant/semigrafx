@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Semigrafx</title>
+    <style>
+        body {
+            background-color: gray;
+        }
+    </style>
+</head>
+<body>
+<div style="width: 512px; margin-left: auto; margin-right: auto;">
+    <div id="vm"></div>
+</div>
+<script src="/vm.js"></script>
+<script src="/test_program.js"></script>
+<script>
+    SemigrafxVM(document.getElementById('vm'), TestProgram);
+</script>
+</body>
+</html>
