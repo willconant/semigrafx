@@ -2,6 +2,11 @@ package Semigrafx::Parser;
 
 use strict;
 
+sub parse {
+    my ($class, $source) = @_;
+    return $class->new($source)->_parse();
+}
+
 sub new {
     my ($class, $source) = @_;
 
@@ -14,7 +19,7 @@ sub new {
     return bless $self, $class;
 }
 
-sub parse {
+sub _parse {
     my $self = shift;
 
     my $functions = [];
