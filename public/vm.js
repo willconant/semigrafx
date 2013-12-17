@@ -1,8 +1,12 @@
-function SemigrafxVM(rootNode, program) {
+var Semigrafx = {};
+
+Semigrafx.startProgram = function(rootNode, program) {
+    this.rootNode = rootNode;
+
     rootNode.innerHTML = '';
 
     rootNode.setAttribute('style',
-        'position: relative; width: 512px; height: 512px; background-color: white;');
+        'position: relative; width: 512px; height: 512px;');
 
     var tileNodes = [];
     initTileNodes();
@@ -25,6 +29,8 @@ function SemigrafxVM(rootNode, program) {
                 tileNode.style.backgroundRepeat = 'no-repeat';
                 tileNode.style.backgroundPositionX = '0px';
                 tileNode.style.backgroundPositionY = '0px';
+                //tileNode.style.webkitFilter = 'saturate(10000)';
+                //tileNode.style.filter = 'brightness(90deg)';
 
                 rootNode.appendChild(tileNode);
                 tileNodes.push(tileNode);
@@ -45,6 +51,11 @@ function SemigrafxVM(rootNode, program) {
     var builtins = Object.create(null);
 
     builtins.buffer = function(size) {
+        if (Array.isArray(size)) {
+            buffers.push(size);
+            return buffers.length - 1;
+        }
+
         if (size < 1 || size > 1024) {
             throw new Error('buffer must have size between 1 and 1024');
         }
@@ -98,6 +109,31 @@ function SemigrafxVM(rootNode, program) {
             throw new Error('set out of bounds ' + buffer + ' ' + idx);
         }
         return buffer[idx] = value;
+    };
+
+    builtins.copy = function(toBuffer, fromBuffer, toLoc, fromLoc, len) {
+        toBuffer = bufferAt(toBuffer);
+        fromBuffer = bufferAt(fromBuffer);
+
+        var dst = toLoc || 0;
+        var src = fromLoc || 0;
+
+        if (!len) {
+            len = fromBuffer.length - src;
+        }
+
+        if (dst < 0 || src < 0 || (dst+len) > toBuffer.length || (src+len) > fromBuffer.length) {
+            throw new Error('copy out of bounds');
+        }
+
+        while (len > 0) {
+            toBuffer[dst] = fromBuffer[src];
+            dst++;
+            src++;
+            len--;
+        }
+
+        return 0;
     };
 
     builtins.screen = function(buffer) {
@@ -183,7 +219,17 @@ function SemigrafxVM(rootNode, program) {
     };
 
     document.onkeydown = function(event) {
-        if (event.metaKey || event.ctrlKey) return true;
+        if (event.keyCode === 27) {
+            if (Semigrafx.editor) {
+                Semigrafx.compileAndRun();
+            }
+            else {
+                Semigrafx.edit(program.source);
+            }
+            return false;
+        }
+
+        if (Semigrafx.editor || event.metaKey || event.ctrlKey) return true;
         if (event.keyCode != 32 && (event.keyCode < 65 || event.keyCode > 90)) return true;
         if (instance.keydown) {
             instance.keydown(event.keyCode, event.shiftKey, event.altKey);
@@ -191,4 +237,55 @@ function SemigrafxVM(rootNode, program) {
         }
         return false;
     };
-}
+};
+
+Semigrafx.loadProgram = function(programId, elementId) {
+    if (!this.loadCallbacks) {
+        this.loadCallbacks = {};
+    }
+
+    if (!this.loadCallbacks[programId]) {
+        this.loadCallbacks[programId] = [];
+    }
+
+    this.loadCallbacks[programId].push(function(program) {
+        Semigrafx.startProgram(document.getElementById(elementId), program);
+    });
+
+    var scriptElt = document.createElement('script');
+    scriptElt.setAttribute('src', '/program/' + programId + '.js');
+    document.body.appendChild(scriptElt);
+};
+
+Semigrafx.programReady = function(programId, program) {
+    var callbacks = (this.loadCallbacks || {})[programId] || [];
+    while (callbacks.length > 0) {
+        callbacks.shift()(program);
+    }
+};
+
+Semigrafx.edit = function(source) {
+    var div = document.createElement('div');
+    div.setAttribute('id', 'semigrafx-code-editor');
+    div.style.width = '512px';
+    div.style.height = '512px';
+    div.style.position = 'absolute';
+    div.style.top = '0';
+    div.style.left = '0';
+    this.rootNode.appendChild(div);
+    
+    this.editor = ace.edit('semigrafx-code-editor');
+    this.editor.setValue(source);
+    this.editor.gotoLine(1);
+    this.editor.focus();
+};
+
+Semigrafx.compileAndRun = function() {
+    var source = this.editor.getValue();
+    $.post('/compile', {source: source}, function(compiled) {
+        Semigrafx.editor.destroy();
+        Semigrafx.rootNode.removeChild(document.getElementById('semigrafx-code-editor'));
+        delete Semigrafx.editor;
+        Semigrafx.startProgram(document.getElementById('vm'), eval(compiled));
+    });
+};

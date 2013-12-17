@@ -4,7 +4,7 @@
     <title>Semigrafx</title>
     <style>
         body {
-            background-color: gray;
+            background-color: #dda;
         }
     </style>
 </head>
@@ -13,9 +13,10 @@
     <div id="vm"></div>
 </div>
 <script src="/vm.js"></script>
-<script src="/test_program.js"></script>
+<script src="/ace/ace.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 <script>
-    SemigrafxVM(document.getElementById('vm'), TestProgram);
+    Semigrafx.loadProgram('0', 'vm');
 </script>
 </body>
 </html>
